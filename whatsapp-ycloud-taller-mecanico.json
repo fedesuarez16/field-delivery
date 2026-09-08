@@ -1,0 +1,822 @@
+{
+  "name": "Field - Agente WhatsApp YCloud — Taller Mecánico",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-ycloud",
+        "responseMode": "onReceived",
+        "responseCode": 200,
+        "responseData": "noData",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000001",
+      "name": "YCloud Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1120,
+        300
+      ],
+      "webhookId": "whatsapp-ycloud-taller"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c-inbound",
+                    "leftValue": "={{ $json.body.type }}",
+                    "rightValue": "whatsapp.inbound_message.received",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "inbound"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c-echo",
+                    "leftValue": "={{ $json.body.type }}",
+                    "rightValue": "whatsapp.smb.message.echoes",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "echo_humano"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "ignorar"
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000002",
+      "name": "Router de Evento",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1",
+              "name": "messageId",
+              "value": "={{ $json.body.whatsappInboundMessage.id }}",
+              "type": "string"
+            },
+            {
+              "id": "f2",
+              "name": "from",
+              "value": "={{ $json.body.whatsappInboundMessage.from }}",
+              "type": "string"
+            },
+            {
+              "id": "f3",
+              "name": "businessNumber",
+              "value": "={{ $json.body.whatsappInboundMessage.to }}",
+              "type": "string"
+            },
+            {
+              "id": "f4",
+              "name": "msgType",
+              "value": "={{ $json.body.whatsappInboundMessage.type }}",
+              "type": "string"
+            },
+            {
+              "id": "f5",
+              "name": "text",
+              "value": "={{ $json.body.whatsappInboundMessage.text?.body || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "f6",
+              "name": "wabaId",
+              "value": "={{ $json.body.whatsappInboundMessage.wabaId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000003",
+      "name": "Normalizar Entrante",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -680,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "removeItemsSeenInPreviousExecutions",
+        "logic": "removeItemsWithAlreadySeenKeyValues",
+        "dedupeValue": "={{ $json.messageId }}",
+        "options": {
+          "historySize": 5000
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000004",
+      "name": "Idempotencia (dedupe por messageId)",
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        -460,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "takeover",
+        "key": "=takeover:{{ $json.from }}",
+        "keyType": "automatic",
+        "options": {
+          "dotNotation": false
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000005",
+      "name": "Leer Takeover Lock",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        180
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c-libre",
+              "leftValue": "={{ $json.takeover }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "c-texto",
+              "leftValue": "={{ $json.msgType }}",
+              "rightValue": "text",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000006",
+      "name": "¿Puede contestar el bot?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -20,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "Sos el asistente virtual de \"Taller Mecánico El Torque\", un taller mecánico en Buenos Aires. Atendés por WhatsApp.\n\n## Tu rol\nResolver consultas de clientes sobre turnos, estado de reparaciones, precios orientativos y horarios. Sos el primer contacto: si podés resolverlo, resolvelo.\n\n## Tono\nEspañol rioplatense, voseo, cordial y directo. Mensajes CORTOS — esto es WhatsApp, no un email. Máximo 3 o 4 líneas salvo que el cliente pida un detalle. Sin markdown: WhatsApp no lo renderiza bien. Usá *negrita* de WhatsApp si necesitás resaltar algo.\n\n## Datos del taller\n- Horario: lunes a viernes 8:00 a 18:00, sábados 9:00 a 13:00.\n- Dirección: Av. Rivadavia 4500, CABA.\n- Diagnóstico computarizado sin cargo si el arreglo se hace acá.\n\n## Reglas duras\n1. NUNCA inventes precios, fechas de entrega ni disponibilidad. Usá las herramientas. Si la herramienta no responde, decí que lo verificás y escalá.\n2. Para el estado de una reparación necesitás la PATENTE. Si no la tenés, pedila antes de llamar a la herramienta.\n3. Para agendar un turno necesitás: nombre, patente, marca/modelo y motivo. Si falta alguno, pedí SOLO el que falta — una cosa a la vez.\n4. Presupuestos cerrados, reclamos, quejas o cualquier cosa que suene a conflicto: NO improvises. Llamá a escalar_a_humano y avisale al cliente que lo contacta una persona del taller.\n5. Si el cliente pide hablar con una persona, escalá sin discutir.\n6. Nunca digas que sos una IA salvo que te lo pregunten de frente. Si te lo preguntan, respondé con honestidad.\n\n## Contexto de la conversación\nTeléfono del cliente: {{ $json.from }}\nFecha y hora actual: {{ $now.setZone('America/Argentina/Buenos_Aires').format('cccc dd/MM/yyyy HH:mm') }}"
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000007",
+      "name": "Agente IA — El Torque",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        240,
+        180
+      ],
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-sonnet-5",
+          "mode": "list",
+          "cachedResultName": "Claude Sonnet 5"
+        },
+        "options": {
+          "maxTokensToSample": 600,
+          "temperature": 0.3
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000008",
+      "name": "Claude Sonnet 5",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        100,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=wa:{{ $('Normalizar Entrante').item.json.from }}",
+        "contextWindowLength": 20
+      },
+      "id": "a1000000-0000-4000-8000-000000000009",
+      "name": "Memoria por Conversación",
+      "type": "@n8n/n8n-nodes-langchain.memoryRedisChat",
+      "typeVersion": 1.5,
+      "position": [
+        260,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Consulta el estado actual de una reparación en el taller usando la patente del vehículo. Devuelve el estado, qué se está haciendo y la fecha estimada de entrega.",
+        "method": "GET",
+        "url": "=https://api.tu-taller.com/reparaciones/{patente}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "placeholderDefinitions": {
+          "values": [
+            {
+              "name": "patente",
+              "description": "Patente del vehículo, sin espacios ni guiones. Ej: AB123CD o ABC123",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000010",
+      "name": "consultar_estado_reparacion",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        420,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Consulta los turnos disponibles del taller para una fecha determinada. Usala SIEMPRE antes de ofrecer un horario al cliente.",
+        "method": "GET",
+        "url": "https://api.tu-taller.com/turnos/disponibilidad",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "parametersQuery": {
+          "values": [
+            {
+              "name": "fecha",
+              "valueProvider": "modelRequired",
+              "description": "Fecha a consultar en formato YYYY-MM-DD"
+            }
+          ]
+        },
+        "placeholderDefinitions": {
+          "values": []
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000011",
+      "name": "consultar_disponibilidad",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        580,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Reserva un turno en el taller. Solo llamala cuando tengas TODOS los datos: nombre, patente, vehículo, motivo y un horario que ya confirmaste como disponible.",
+        "method": "POST",
+        "url": "https://api.tu-taller.com/turnos",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "parametersBody": {
+          "values": [
+            {
+              "name": "nombre",
+              "valueProvider": "modelRequired",
+              "description": "Nombre y apellido del cliente"
+            },
+            {
+              "name": "telefono",
+              "valueProvider": "fieldValue",
+              "value": "={{ $('Normalizar Entrante').item.json.from }}"
+            },
+            {
+              "name": "patente",
+              "valueProvider": "modelRequired",
+              "description": "Patente del vehículo"
+            },
+            {
+              "name": "vehiculo",
+              "valueProvider": "modelRequired",
+              "description": "Marca, modelo y año. Ej: Volkswagen Gol 2018"
+            },
+            {
+              "name": "motivo",
+              "valueProvider": "modelRequired",
+              "description": "Motivo de la visita descrito por el cliente"
+            },
+            {
+              "name": "inicio",
+              "valueProvider": "modelRequired",
+              "description": "Fecha y hora del turno en ISO 8601. Ej: 2026-08-25T10:00:00-03:00"
+            }
+          ]
+        },
+        "placeholderDefinitions": {
+          "values": []
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000012",
+      "name": "agendar_turno",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        740,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "2OdwAQW0lfOqjXcY",
+          "mode": "list",
+          "cachedResultName": "Field - Agente WhatsApp YCloud — Escalar a Humano (sub-workflow)"
+        },
+        "name": "escalar_a_humano",
+        "description": "Deriva la conversación a una persona del taller y SILENCIA al bot en este chat. Usala ante reclamos, presupuestos cerrados, pedidos explícitos de hablar con alguien, o cualquier cosa que no puedas resolver con certeza. Después de llamarla, avisale al cliente que lo contacta una persona.",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "telefono": "={{ $('Normalizar Entrante').item.json.from }}",
+            "motivo": "={{ $fromAI('motivo', 'Razón por la que se escala la conversación a un humano', 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000013",
+      "name": "escalar_a_humano",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        900,
+        400
+      ],
+      "notesInFlow": true,
+      "notes": "Apuntá este tool a un sub-workflow que: (1) haga SET takeover:{telefono} = 1 con TTL, (2) notifique al taller por Slack/email."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.ycloud.com/v2/whatsapp/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  from: $('Normalizar Entrante').item.json.businessNumber.startsWith('+') ? $('Normalizar Entrante').item.json.businessNumber : '+' + $('Normalizar Entrante').item.json.businessNumber,\n  to: '+' + $('Normalizar Entrante').item.json.from,\n  type: 'text',\n  text: { body: $json.output }\n}) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": false
+            }
+          }
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000014",
+      "name": "Enviar Respuesta (YCloud)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "=bot:sent:{{ $json.wamid }}",
+        "value": "1",
+        "keyType": "string",
+        "expire": true,
+        "ttl": 300
+      },
+      "id": "a1000000-0000-4000-8000-000000000015",
+      "name": "Marcar Envío Propio",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        780,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "esPropio",
+        "key": "=bot:sent:{{ $json.body.whatsappMessage.wamid }}",
+        "keyType": "automatic",
+        "options": {
+          "dotNotation": false
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000016",
+      "name": "¿Eco de mi propio envío?",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -680,
+        440
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c-humano",
+              "leftValue": "={{ $json.esPropio }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000017",
+      "name": "¿Escribió un humano?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -460,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "=takeover:{{ $('YCloud Webhook').item.json.body.whatsappMessage.to.replace('+','') }}",
+        "value": "1",
+        "keyType": "string",
+        "expire": true,
+        "ttl": 1800
+      },
+      "id": "a1000000-0000-4000-8000-000000000018",
+      "name": "Activar Takeover Lock (30 min)",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        400
+      ],
+      "notesInFlow": true,
+      "notes": "El humano contestó desde la app. El bot se calla 30 min en ESE chat."
+    },
+    {
+      "parameters": {},
+      "id": "a1000000-0000-4000-8000-000000000019",
+      "name": "Ignorar",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -680,
+        620
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "a1000000-0000-4000-8000-000000000020",
+      "name": "Silencio (humano al mando o no-texto)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        240,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.ycloud.com/v2/whatsapp/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  from: '+' + $('Normalizar Entrante').item.json.businessNumber.replace('+',''),\n  to: '+' + $('Normalizar Entrante').item.json.from,\n  type: 'text',\n  text: { body: 'Perdón, tuvimos un problema técnico de este lado. Ya avisamos al taller y te contactan a la brevedad.' }\n}) }}",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000021",
+      "name": "Fallback si falla el Agente",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "YCloud Webhook": {
+      "main": [
+        [
+          {
+            "node": "Router de Evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router de Evento": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Entrante",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "¿Eco de mi propio envío?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ignorar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Entrante": {
+      "main": [
+        [
+          {
+            "node": "Idempotencia (dedupe por messageId)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Idempotencia (dedupe por messageId)": {
+      "main": [
+        [
+          {
+            "node": "Leer Takeover Lock",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Takeover Lock": {
+      "main": [
+        [
+          {
+            "node": "¿Puede contestar el bot?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Puede contestar el bot?": {
+      "main": [
+        [
+          {
+            "node": "Agente IA — El Torque",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Silencio (humano al mando o no-texto)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Sonnet 5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente IA — El Torque",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memoria por Conversación": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agente IA — El Torque",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "consultar_estado_reparacion": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente IA — El Torque",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "consultar_disponibilidad": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente IA — El Torque",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "agendar_turno": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente IA — El Torque",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "escalar_a_humano": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente IA — El Torque",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente IA — El Torque": {
+      "main": [
+        [
+          {
+            "node": "Enviar Respuesta (YCloud)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fallback si falla el Agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Respuesta (YCloud)": {
+      "main": [
+        [
+          {
+            "node": "Marcar Envío Propio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Eco de mi propio envío?": {
+      "main": [
+        [
+          {
+            "node": "¿Escribió un humano?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Escribió un humano?": {
+      "main": [
+        [
+          {
+            "node": "Activar Takeover Lock (30 min)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ignorar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "executionTimeout": 120
+  },
+  "pinData": {},
+  "tags": [
+    {
+      "name": "whatsapp"
+    },
+    {
+      "name": "ycloud"
+    },
+    {
+      "name": "coexistence"
+    }
+  ]
+}
