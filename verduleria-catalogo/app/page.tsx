@@ -7,7 +7,9 @@ export const dynamic = "force-dynamic";
 export default async function Page() {
   const { data, error } = await getSupabase()
     .from("verduleria_productos")
-    .select("id, producto, categoria, unidad, precio, disponible, lista, actualizado_en")
+    .select(
+      "id, producto, categoria, unidad, precio, precio_mayorista, disponible, lista, actualizado_en"
+    )
     .order("categoria", { ascending: true })
     .order("producto", { ascending: true });
 

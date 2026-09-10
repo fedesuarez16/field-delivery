@@ -40,6 +40,7 @@ export type Producto = {
   categoria: string;
   unidad: string;
   precio: number;
+  precio_mayorista: number | null;
   disponible: boolean;
   lista: "minorista" | "mayorista";
   actualizado_en: string;
