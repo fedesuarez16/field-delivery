@@ -77,3 +77,56 @@ export async function cambiarDisponible(
   revalidatePath("/");
   return { ok: true };
 }
+
+export type NuevoProducto = {
+  producto: string;
+  categoria: string;
+  unidad: string;
+  precio: string;
+  precioMayorista: string;
+};
+
+export type ResultadoCrear = { ok: true } | { ok: false; error: string };
+
+/**
+ * Crea un producto nuevo en el catalogo (ej: una canasta nueva).
+ * La tabla NO tiene policy de INSERT para el rol anon (a proposito, ver
+ * lib/supabase.ts), asi que esto solo funciona si SUPABASE_SERVICE_ROLE_KEY
+ * esta configurada como variable de entorno. Si no lo esta, Supabase devuelve
+ * un error de RLS y se lo mostramos tal cual al usuario.
+ */
+export async function crearProducto(datos: NuevoProducto): Promise<ResultadoCrear> {
+  const producto = datos.producto.trim();
+  const categoria = datos.categoria.trim();
+  const unidad = datos.unidad.trim();
+
+  if (!producto) return { ok: false, error: "Falta el nombre del producto" };
+  if (!categoria) return { ok: false, error: "Falta la categoria" };
+  if (!unidad) return { ok: false, error: "Falta la unidad" };
+
+  const precio = normalizarPrecio(datos.precio);
+  if (typeof precio !== "number") return precio;
+
+  let precioMayorista: number | null = null;
+  if (datos.precioMayorista.trim() !== "") {
+    const pm = normalizarPrecio(datos.precioMayorista);
+    if (typeof pm !== "number") return pm;
+    precioMayorista = pm;
+  }
+
+  const { error } = await getSupabase().from("verduleria_productos").insert({
+    producto,
+    categoria,
+    unidad,
+    precio,
+    precio_mayorista: precioMayorista,
+    disponible: true,
+    lista: "minorista",
+    actualizado_en: new Date().toISOString(),
+  });
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/");
+  return { ok: true };
+}

@@ -1,5 +1,6 @@
 import { getSupabase, type Producto } from "@/lib/supabase";
 import CatalogoTable from "@/components/CatalogoTable";
+import AgregarProducto from "@/components/AgregarProducto";
 import Nav from "@/components/Nav";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +42,10 @@ export default async function Page() {
           usa el agente de WhatsApp para cotizar.
         </p>
       </header>
+      <AgregarProducto
+        categorias={[...new Set(productos.map((p) => p.categoria))].sort()}
+        unidades={[...new Set(productos.map((p) => p.unidad))].sort()}
+      />
       <CatalogoTable productos={productos} />
     </main>
   );

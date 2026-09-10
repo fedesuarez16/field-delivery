@@ -13,9 +13,9 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
  *
  * Si defines SUPABASE_SERVICE_ROLE_KEY, se usa esa en lugar de la anon.
  */
-const URL_DEFECTO = "https://oviuvzryixvjottkjnoc.supabase.co";
+const URL_DEFECTO = "https://coawoqhwfbkgjblhuwql.supabase.co";
 const ANON_DEFECTO =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im92aXV2enJ5aXh2am90dGtqbm9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2NzQzODksImV4cCI6MjA2OTI1MDM4OX0.iMd5ohcaoGsJArPmVvhDgWz7revYBPQKI-iu5BzjpZc";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvYXdvcWh3ZmJrZ2pibGh1d3FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5OTYzNTksImV4cCI6MjEwNDU3MjM1OX0.yQGiYHUV-Hc0Eup_6vxwPomyw_CK3pFdm---_2cnWqo";
 
 let cliente: SupabaseClient | null = null;
 
