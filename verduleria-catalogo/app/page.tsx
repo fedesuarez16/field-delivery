@@ -9,7 +9,7 @@ export default async function Page() {
   const { data, error } = await getSupabase()
     .from("verduleria_productos")
     .select(
-      "id, producto, categoria, unidad, precio, precio_mayorista, disponible, lista, actualizado_en"
+      "id, producto, categoria, unidad, precio, precio_mayorista, disponible, lista, actualizado_en, descripcion"
     )
     .order("categoria", { ascending: true })
     .order("producto", { ascending: true });

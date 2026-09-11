@@ -44,4 +44,5 @@ export type Producto = {
   disponible: boolean;
   lista: "minorista" | "mayorista";
   actualizado_en: string;
+  descripcion: string | null;
 };

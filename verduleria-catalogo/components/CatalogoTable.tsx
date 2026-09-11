@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import {
   actualizarPrecio,
   actualizarPrecioMayorista,
+  actualizarDescripcion,
   cambiarDisponible,
 } from "@/app/actions";
 import type { Producto } from "@/lib/supabase";
@@ -16,6 +17,7 @@ type Columna = "minorista" | "mayorista";
 export default function CatalogoTable({ productos }: { productos: Producto[] }) {
   const [busqueda, setBusqueda] = useState("");
   const [borradores, setBorradores] = useState<Record<string, string>>({});
+  const [borradoresDesc, setBorradoresDesc] = useState<Record<number, string>>({});
   const [estado, setEstado] = useState<Estado>(null);
   const [guardandoKey, setGuardandoKey] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -67,6 +69,32 @@ export default function CatalogoTable({ productos }: { productos: Producto[] }) 
         tipo: "ok",
         texto: `${p.producto}: precio ${etiqueta} actualizado a $${clp.format(res.precio)}`,
       });
+    } else {
+      setEstado({ tipo: "err", texto: `${p.producto}: ${res.error}` });
+    }
+  }
+
+  function valorDescripcion(p: Producto) {
+    return borradoresDesc[p.id] ?? (p.descripcion ?? "");
+  }
+
+  function descripcionEditada(p: Producto) {
+    return valorDescripcion(p).trim() !== (p.descripcion ?? "").trim();
+  }
+
+  async function guardarDescripcion(p: Producto) {
+    const k = `${p.id}:desc`;
+    setGuardandoKey(k);
+    setEstado(null);
+    const res = await actualizarDescripcion(p.id, valorDescripcion(p));
+    setGuardandoKey(null);
+
+    if (res.ok) {
+      setBorradoresDesc((b) => {
+        const { [p.id]: _drop, ...resto } = b;
+        return resto;
+      });
+      setEstado({ tipo: "ok", texto: `${p.producto}: contenido actualizado` });
     } else {
       setEstado({ tipo: "err", texto: `${p.producto}: ${res.error}` });
     }
@@ -137,35 +165,59 @@ export default function CatalogoTable({ productos }: { productos: Producto[] }) 
                 <th>Producto</th>
                 <th>Precio minorista (CLP)</th>
                 <th>Precio mayorista (CLP)</th>
+                <th>Contenido / descripcion</th>
                 <th>Estado</th>
               </tr>
             </thead>
             <tbody>
-              {visibles.map((p) => (
-                <tr key={p.id} data-off={p.disponible ? "0" : "1"}>
-                  <td>
-                    <div className="nombre">{p.producto}</div>
-                    <div className="meta">
-                      {p.categoria} &middot; por {p.unidad}
-                    </div>
-                  </td>
-                  {celdaPrecio(p, "minorista")}
-                  {celdaPrecio(p, "mayorista")}
-                  <td className="col-estado">
-                    <button
-                      type="button"
-                      className="chip"
-                      data-on={p.disponible ? "1" : "0"}
-                      onClick={() => alternarDisponible(p)}
-                    >
-                      {p.disponible ? "Disponible" : "Agotado"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {visibles.map((p) => {
+                const descEditado = descripcionEditada(p);
+                const kDesc = `${p.id}:desc`;
+                return (
+                  <tr key={p.id} data-off={p.disponible ? "0" : "1"}>
+                    <td>
+                      <div className="nombre">{p.producto}</div>
+                      <div className="meta">
+                        {p.categoria} &middot; por {p.unidad}
+                      </div>
+                    </td>
+                    {celdaPrecio(p, "minorista")}
+                    {celdaPrecio(p, "mayorista")}
+                    <td className="col-descripcion">
+                      <textarea
+                        className="descripcion-input"
+                        placeholder="ej: 1kg tomate, 1kg papa, 1 lechuga..."
+                        rows={2}
+                        value={valorDescripcion(p)}
+                        onChange={(e) =>
+                          setBorradoresDesc((b) => ({ ...b, [p.id]: e.target.value }))
+                        }
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        disabled={!descEditado || guardandoKey === kDesc}
+                        onClick={() => guardarDescripcion(p)}
+                      >
+                        {guardandoKey === kDesc ? "..." : "Guardar"}
+                      </button>
+                    </td>
+                    <td className="col-estado">
+                      <button
+                        type="button"
+                        className="chip"
+                        data-on={p.disponible ? "1" : "0"}
+                        onClick={() => alternarDisponible(p)}
+                      >
+                        {p.disponible ? "Disponible" : "Agotado"}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
               {visibles.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="vacio">
+                  <td colSpan={5} className="vacio">
                     No hay productos que coincidan.
                   </td>
                 </tr>

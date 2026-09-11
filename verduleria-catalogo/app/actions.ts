@@ -78,12 +78,33 @@ export async function cambiarDisponible(
   return { ok: true };
 }
 
+/**
+ * Actualiza la descripcion/contenido de un producto (ej: que trae una canasta).
+ * El agente de WhatsApp la usa para contestar si el cliente pregunta que incluye.
+ */
+export async function actualizarDescripcion(
+  id: number,
+  descripcion: string
+): Promise<{ ok: boolean; error?: string }> {
+  const limpio = descripcion.trim();
+  const { error } = await getSupabase()
+    .from("verduleria_productos")
+    .update({ descripcion: limpio || null, actualizado_en: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/");
+  return { ok: true };
+}
+
 export type NuevoProducto = {
   producto: string;
   categoria: string;
   unidad: string;
   precio: string;
   precioMayorista: string;
+  descripcion: string;
 };
 
 export type ResultadoCrear = { ok: true } | { ok: false; error: string };
@@ -120,6 +141,7 @@ export async function crearProducto(datos: NuevoProducto): Promise<ResultadoCrea
     unidad,
     precio,
     precio_mayorista: precioMayorista,
+    descripcion: datos.descripcion.trim() || null,
     disponible: true,
     lista: "minorista",
     actualizado_en: new Date().toISOString(),

@@ -5,7 +5,7 @@ import { crearProducto } from "@/app/actions";
 
 type Estado = { tipo: "ok" | "err"; texto: string } | null;
 
-const VACIO = { producto: "", categoria: "", unidad: "", precio: "", precioMayorista: "" };
+const VACIO = { producto: "", categoria: "", unidad: "", precio: "", precioMayorista: "", descripcion: "" };
 
 export default function AgregarProducto({ categorias, unidades }: { categorias: string[]; unidades: string[] }) {
   const [abierto, setAbierto] = useState(false);
@@ -78,6 +78,13 @@ export default function AgregarProducto({ categorias, unidades }: { categorias: 
           placeholder="Precio mayorista (opcional)"
           value={datos.precioMayorista}
           onChange={(e) => setDatos((d) => ({ ...d, precioMayorista: e.target.value }))}
+        />
+        <textarea
+          className="descripcion-input"
+          placeholder="Contenido (opcional, ej: 1kg tomate, 1kg papa, 1 lechuga...)"
+          rows={2}
+          value={datos.descripcion}
+          onChange={(e) => setDatos((d) => ({ ...d, descripcion: e.target.value }))}
         />
         <button
           type="button"

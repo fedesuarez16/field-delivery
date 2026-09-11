@@ -189,6 +189,20 @@ tr[data-off="1"] td:not(.col-estado) {
   margin-right: 4px;
 }
 
+.col-descripcion {
+  min-width: 220px;
+}
+
+.descripcion-input {
+  width: 100%;
+  min-width: 200px;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 13px;
+  display: block;
+  margin-bottom: 6px;
+}
+
 .btn {
   background: var(--panel-2);
   border: 1px solid var(--border);
